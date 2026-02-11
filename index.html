@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M R DEVELOPER - NID Master Tool</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        /* সিগনেচারের জন্য অগোছালো হাতের লেখা ফন্ট */
+        @import url('https://fonts.googleapis.com/css2?family=Zeyada&display=swap');
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e3c72, #2a5298, #2ecc71);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px;
+            color: #fff;
+        }
+
+        .input-panel {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 480px;
+            margin-bottom: 40px;
+            color: #333;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+
+        .btn-group { display: flex; gap: 15px; margin-top: 15px; }
+        button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .gen-btn { background: #27ae60; color: white; }
+        .pdf-btn { background: #e74c3c; color: white; display: none; }
+
+        /* --- NID Card Design --- */
+        #nid-card {
+            width: 580px; 
+            height: 330px;
+            border: 4.5px solid #000;
+            position: relative;
+            background: #ffffff;
+            padding: 15px;
+            box-sizing: border-box;
+            display: none;
+            overflow: hidden;
+            color: #000;
+        }
+
+        .middle-line {
+            position: absolute;
+            top: 80px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #000;
+            z-index: 5;
+        }
+
+        /* শাপলা ২০% ছোট সাইজ */
+        .watermark {
+            position: absolute;
+            top: 52%;
+            left: 50%;
+            transform: translate(-50%, -40%);
+            width: 190px; 
+            opacity: 0.15;
+            z-index: 0;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            padding-bottom: 5px;
+            position: relative;
+            z-index: 6;
+        }
+
+        .gov-logo { width: 55px; height: 55px; margin-right: 15px; opacity: 0.9; }
+
+        .header-text { text-align: center; flex-grow: 1; }
+        .header-text h3 { margin: 0; font-size: 19px; color: #000; font-weight: bold; }
+        .header-text p { margin: 0; font-size: 13px; font-weight: bold; color: #006a4e; }
+        
+        .nid-label { font-size: 15px; font-weight: bold; margin-top: 4px; display: block; }
+        .red-part { color: #d63031; }
+
+        .card-body { 
+            display: flex; 
+            margin-top: 10px; 
+            position: relative; 
+            z-index: 1; 
+        }
+
+        .left-part { text-align: center; margin-right: 25px; }
+        .photo-box {
+            width: 130px;
+            height: 155px;
+            border: 2px solid #000;
+        }
+        #output-photo { width: 100%; height: 100%; object-fit: cover; }
+
+        /* স্বাক্ষর ছোট এবং অগোছালো */
+        .signature {
+            font-family: 'Zeyada', cursive;
+            font-size: 18px; 
+            color: #000;
+            margin-top: 2px;
+            width: 130px;
+            text-align: center;
+            font-weight: normal;
+        }
+
+        /* তথ্য লেআউট - চিকন ও বড় ফন্ট */
+        .info-part { 
+            font-size: 21px; /* লেবেলগুলোর সাইজ বাড়ানো হয়েছে */
+            line-height: 1.6; 
+            flex-grow: 1;
+            font-weight: normal;
+        }
+        
+        /* তথ্যগুলো চিকন ও সামঞ্জস্যপূর্ণ সাইজ */
+        .data-text { color: #000; font-weight: normal; font-size: 21px; }
+        .red-info { color: #d63031; font-weight: normal; font-size: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="input-panel">
+    <h2 style="text-align:center; color:#1e3c72;">M R DEVELOPER</h2>
+    <input type="text" id="nameBn" placeholder="নাম (বাংলায়)">
+    <input type="text" id="nameEn" placeholder="Name (English)">
+    <input type="text" id="father" placeholder="পিতার নাম">
+    <input type="text" id="mother" placeholder="মাতার নাম">
+    <input type="text" id="dob" placeholder="জন্ম তারিখ">
+    <input type="text" id="idno" placeholder="আইডি নং">
+    <input type="text" id="sigText" placeholder="স্বাক্ষর লিখুন">
+    <input type="file" id="imgIn" accept="image/*">
+    
+    <div class="btn-group">
+        <button class="gen-btn" onclick="generate()">Generate Card</button>
+        <button id="dlBtn" class="pdf-btn" onclick="download()">Download PDF</button>
+    </div>
+</div>
+
+<div id="nid-card">
+    <div class="middle-line"></div>
+    <img src="https://upload.wikimedia.org/wikipedia/commons/8/81/National_emblem_of_Bangladesh.svg" class="watermark">
+    
+    <div class="header">
+        <img src="https://i.ibb.co.com/zhXjQR75/gov-logo-t.png" class="gov-logo">
+        <div class="header-text">
+            <h3>গণপ্রজাতন্ত্রী বাংলাদেশ সরকার</h3>
+            <p>Government of the People's Republic of Bangladesh</p>
+            <span class="nid-label">
+                <span class="red-part">National ID Card</span> / জাতীয় পরিচয় পত্র
+            </span>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <div class="left-part">
+            <div class="photo-box">
+                <img id="output-photo" src="" alt="">
+            </div>
+            <div class="signature" id="output-sig"></div>
+        </div>
+        <div class="info-part">
+            নাম: <span id="resBn" class="data-text"></span><br>
+            Name: <span id="resEn" class="data-text"></span><br>
+            পিতা: <span id="resFat" class="data-text"></span><br>
+            মাতা: <span id="resMot" class="data-text"></span><br>
+            Date of Birth: <span id="resDob" class="red-info"></span><br>
+            ID NO: <span id="resId" class="red-info"></span>
+        </div>
+    </div>
+</div>
+
+<script>
+    function generate() {
+        document.getElementById('resBn').innerText = document.getElementById('nameBn').value;
+        document.getElementById('resEn').innerText = document.getElementById('nameEn').value;
+        document.getElementById('resFat').innerText = document.getElementById('father').value;
+        document.getElementById('resMot').innerText = document.getElementById('mother').value;
+        document.getElementById('resDob').innerText = document.getElementById('dob').value;
+        document.getElementById('resId').innerText = document.getElementById('idno').value;
+        document.getElementById('output-sig').innerText = document.getElementById('sigText').value;
+
+        const file = document.getElementById('imgIn').files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) { document.getElementById('output-photo').src = e.target.result; }
+            reader.readAsDataURL(file);
+        }
+
+        document.getElementById('nid-card').style.display = 'block';
+        document.getElementById('dlBtn').style.display = 'block';
+    }
+
+    function download() {
+        const element = document.getElementById('nid-card');
+        html2pdf().from(element).set({
+            margin: 10,
+            filename: 'M_R_Developer_NID.pdf',
+            html2canvas: { scale: 3 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        }).save();
+    }
+</script>
+
+</body>
+</html>
