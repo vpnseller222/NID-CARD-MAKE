@@ -4,6 +4,7 @@ import threading
 import time
 import random
 import os
+import shutil
 import undetected_chromedriver as uc
 from fake_useragent import UserAgent
 from datetime import datetime
@@ -33,7 +34,7 @@ def run_automation(chat_id, url, threads_count):
                 options.add_argument('--disable-blink-features=AutomationControlled')
                 options.add_argument('--incognito')
                 
-                # --- রেলওয়ে সার্ভার ফিক্স (Headless ও Binary Path) ---
+                # --- রেলওয়ে সার্ভার ফিক্স (Headless ও Binary Path Auto-Detection) ---
                 options.add_argument('--headless') 
                 options.add_argument('--no-sandbox') 
                 options.add_argument('--disable-dev-shm-usage') 
@@ -42,15 +43,18 @@ def run_automation(chat_id, url, threads_count):
                 
                 # ২. ব্রাউজার চালু করা এবং লাইভ লগ প্রিন্ট করা
                 now = datetime.now().strftime("%H:%M:%S")
-                print(f"[{now}] [LOG] Identity Created: {current_ua[:30]}...")
                 
-                # ক্রোম ব্রাউজারের পাথ সুনির্দিষ্টভাবে বলে দেওয়া যাতে Binary Error না আসে
+                # রেলওয়ে সার্ভারের ভেতরে ব্রাউজারটি কোথায় আছে তা অটোমেটিক খুঁজে বের করার লজিক
+                chrome_path = shutil.which("google-chrome") or shutil.which("google-chrome-stable") or "/usr/bin/google-chrome"
+                print(f"[{now}] [LOG] Starting Browser at: {chrome_path}")
+                
                 driver = uc.Chrome(
                     options=options,
-                    browser_executable_path="/usr/bin/google-chrome"
+                    browser_executable_path=chrome_path
                 )
                 
                 # ৩. লিঙ্কে প্রবেশ এবং লাইভ লগ
+                print(f"[{now}] [LOG] Identity: {current_ua[:30]}...")
                 print(f"[{now}] [LOG] Visiting Adestra URL: {url}")
                 driver.get(url)
                 
@@ -72,12 +76,12 @@ def run_automation(chat_id, url, threads_count):
             finally:
                 if driver:
                     try:
-                        driver.quit() # ব্রাউজার পুরোপুরি বন্ধ করা
+                        driver.quit() 
                         print(f"[{datetime.now().strftime('%H:%M:%S')}] [LOG] Browser closed. Recycling session...")
                     except:
                         pass
                 
-                # ব্রাউজার বন্ধ হওয়ার পর ২ সেকেন্ড গ্যাপ (অরিজাল লজিক)
+                # ব্রাউজার বন্ধ হওয়ার পর ২ সেকেন্ড গ্যাপ (অরিজিনাল লজিক)
                 time.sleep(2)
 
     # থ্রেড সংখ্যা অনুযায়ী ইঞ্জিন স্টার্ট করা
@@ -96,7 +100,7 @@ def send_welcome(message):
         user_data[chat_id] = {
             'running': False, 
             'url': '', 
-            'threads': 5, 
+            'threads': 2, 
             'total_clicks': 0
         }
     
@@ -123,7 +127,7 @@ def send_welcome(message):
 def handle_all_messages(message):
     chat_id = message.chat.id
     if chat_id not in user_data:
-        user_data[chat_id] = {'running': False, 'url': '', 'threads': 5, 'total_clicks': 0}
+        user_data[chat_id] = {'running': False, 'url': '', 'threads': 2, 'total_clicks': 0}
 
     text = message.text
 
@@ -132,7 +136,7 @@ def handle_all_messages(message):
         bot.register_next_step_handler(msg, save_url)
     
     elif text == "🔢 Set Threads":
-        msg = bot.send_message(chat_id, "থ্রেড সংখ্যা দিন (Railway-র জন্য ১-৩ এর মধ্যে রাখা ভালো):")
+        msg = bot.send_message(chat_id, "থ্রেড সংখ্যা দিন (রেলওয়েতে ১ বা ২ ভালো):")
         bot.register_next_step_handler(msg, save_threads)
 
     elif text == "🚀 START ENGINE":
@@ -176,7 +180,7 @@ def save_threads(message):
     except:
         bot.send_message(message.chat.id, "❌ সঠিক সংখ্যা লিখুন।")
 
-# --- বট স্টার্ট এবং লাইভ লগ ফিক্স ---
+# --- বট স্টার্ট এবং রেলওয়ে কানেকশন ড্রপ ফিক্স ---
 if __name__ == "__main__":
     print("------------------------------------------")
     print("MIZANUR RAHMAN'S SYSTEM IS STARTING...")
@@ -187,6 +191,7 @@ if __name__ == "__main__":
         try:
             bot.polling(none_stop=True, interval=0, timeout=20)
         except Exception as e:
+            # যদি টেলিগ্রাম কানেকশন ছিঁড়ে যায়, ৫ সেকেন্ড পর আবার কানেক্ট করবে
             print(f"Polling Error at {datetime.now().strftime('%H:%M:%S')}: {e}")
             time.sleep(5)
-                    
+                
