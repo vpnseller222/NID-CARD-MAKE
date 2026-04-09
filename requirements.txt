@@ -2,3 +2,4 @@ pyTelegramBotAPI
 undetected-chromedriver
 fake-useragent
 selenium
+setuptools
