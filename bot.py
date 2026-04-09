@@ -32,7 +32,7 @@ def run_automation(chat_id, url, threads_count):
                 options.add_argument('--disable-blink-features=AutomationControlled')
                 options.add_argument('--incognito')
                 
-                # --- ক্লাউড সার্ভার ইস্যু ফিক্স (মাস্ট প্রয়োজন) ---
+                # --- ক্লাউড সার্ভার ইস্যু ফিক্স (Binary Location Error সমাধানের জন্য) ---
                 options.add_argument('--headless') # সার্ভারে ডিসপ্লে নেই তাই হেডলেস
                 options.add_argument('--no-sandbox') # Root ইউজার ইস্যু ফিক্স
                 options.add_argument('--disable-dev-shm-usage') # মেমোরি ক্র্যাশ ফিক্স
@@ -43,8 +43,11 @@ def run_automation(chat_id, url, threads_count):
                 now = datetime.now().strftime("%H:%M:%S")
                 print(f"[{now}] Initializing New Identity for {chat_id}...")
                 
-                # Railway/Linux এর জন্য অটো কনফিগারেশন
-                driver = uc.Chrome(options=options)
+                # Railway সার্ভারে ক্রোমের সঠিক লোকেশন চিনিয়ে দেওয়া (Fix)
+                driver = uc.Chrome(
+                    options=options,
+                    browser_executable_path="/usr/bin/google-chrome"
+                )
                 
                 # ৩. লিঙ্কে প্রবেশ
                 print(f"[{now}] Visiting Link: {url}")
@@ -173,4 +176,4 @@ def save_threads(message):
 if __name__ == "__main__":
     print("Mizanur's Telegram Bot is starting...")
     bot.infinity_polling()
-    
+                    
