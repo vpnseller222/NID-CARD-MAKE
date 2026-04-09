@@ -9,6 +9,7 @@ from fake_useragent import UserAgent
 from datetime import datetime
 
 # --- কনফিগারেশন ---
+# তোমার দেওয়া টোকেনটি এখানে সেট করা হয়েছে
 API_TOKEN = '8615640384:AAHuqDZuv7zzxtvgUMwlAg6i1hrAHizcqC4'
 bot = telebot.TeleBot(API_TOKEN)
 
@@ -32,68 +33,72 @@ def run_automation(chat_id, url, threads_count):
                 options.add_argument('--disable-blink-features=AutomationControlled')
                 options.add_argument('--incognito')
                 
-                # --- ক্লাউড সার্ভার ইস্যু ফিক্স (Binary Location Error সমাধানের জন্য) ---
-                options.add_argument('--headless') # সার্ভারে ডিসপ্লে নেই তাই হেডলেস
-                options.add_argument('--no-sandbox') # Root ইউজার ইস্যু ফিক্স
-                options.add_argument('--disable-dev-shm-usage') # মেমোরি ক্র্যাশ ফিক্স
+                # --- রেলওয়ে সার্ভার ফিক্স (Headless ও Binary Path) ---
+                options.add_argument('--headless') 
+                options.add_argument('--no-sandbox') 
+                options.add_argument('--disable-dev-shm-usage') 
                 options.add_argument('--disable-gpu')
                 options.add_argument('--window-size=1280,720')
                 
-                # ২. ব্রাউজার চালু করা (Undetected Mode)
+                # ২. ব্রাউজার চালু করা এবং লাইভ লগ প্রিন্ট করা
                 now = datetime.now().strftime("%H:%M:%S")
-                print(f"[{now}] Initializing New Identity for {chat_id}...")
+                print(f"[{now}] [LOG] Identity Created: {current_ua[:30]}...")
                 
-                # Railway সার্ভারে ক্রোমের সঠিক লোকেশন চিনিয়ে দেওয়া (Fix)
+                # ক্রোম ব্রাউজারের পাথ সুনির্দিষ্টভাবে বলে দেওয়া যাতে Binary Error না আসে
                 driver = uc.Chrome(
                     options=options,
                     browser_executable_path="/usr/bin/google-chrome"
                 )
                 
-                # ৩. লিঙ্কে প্রবেশ
-                print(f"[{now}] Visiting Link: {url}")
+                # ৩. লিঙ্কে প্রবেশ এবং লাইভ লগ
+                print(f"[{now}] [LOG] Visiting Adestra URL: {url}")
                 driver.get(url)
                 
-                # ৪. ১০ সেকেন্ড অপেক্ষা (আপনার অরিজিনাল কাউন্টডাউন লজিক)
+                # ৪. ১০ সেকেন্ড অপেক্ষা (অরিজিনাল কাউন্টডাউন লজিক)
                 for second in range(10, 0, -1):
                     if not user_data.get(chat_id, {}).get('running', False): 
                         break
                     time.sleep(1)
                 
-                # ৫. সাকসেস কাউন্ট
+                # ৫. সাকসেস কাউন্ট এবং লাইভ লগ
                 user_data[chat_id]['total_clicks'] += 1
-                print(f"Success! Total Clicks for {chat_id}: {user_data[chat_id]['total_clicks']}")
+                success_now = datetime.now().strftime("%H:%M:%S")
+                print(f"[{success_now}] [SUCCESS] Click Counted! Total: {user_data[chat_id]['total_clicks']}")
                 
             except Exception as e:
-                print(f"Critical Error: {str(e)}")
+                error_now = datetime.now().strftime("%H:%M:%S")
+                print(f"[{error_now}] [CRITICAL ERROR] Details: {str(e)}")
             
             finally:
                 if driver:
                     try:
                         driver.quit() # ব্রাউজার পুরোপুরি বন্ধ করা
+                        print(f"[{datetime.now().strftime('%H:%M:%S')}] [LOG] Browser closed. Recycling session...")
                     except:
                         pass
                 
-                # একটি ব্রাউজার বন্ধ হওয়ার পর ২ সেকেন্ড গ্যাপ (আপনার লজিক)
+                # ব্রাউজার বন্ধ হওয়ার পর ২ সেকেন্ড গ্যাপ (অরিজাল লজিক)
                 time.sleep(2)
 
     # থ্রেড সংখ্যা অনুযায়ী ইঞ্জিন স্টার্ট করা
     for i in range(threads_count):
         t = threading.Thread(target=worker, daemon=True)
         t.start()
-        time.sleep(1) # পিসি/সার্ভার হ্যাং হওয়া রোধে ১ সেকেন্ড গ্যাপ
+        print(f"--- Thread {i+1} Started ---")
+        time.sleep(1)
 
 # --- টেলিগ্রাম ইন্টারফেস ডিজাইন (Buttons) ---
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     chat_id = message.chat.id
-    # ইউজার ডাটা ইনিশিয়ালাইজেশন
-    user_data[chat_id] = {
-        'running': False, 
-        'url': '', 
-        'threads': 5, # ডিফল্ট থ্রেড
-        'total_clicks': 0
-    }
+    if chat_id not in user_data:
+        user_data[chat_id] = {
+            'running': False, 
+            'url': '', 
+            'threads': 5, 
+            'total_clicks': 0
+        }
     
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btn1 = types.KeyboardButton("🔗 Set URL")
@@ -118,8 +123,7 @@ def send_welcome(message):
 def handle_all_messages(message):
     chat_id = message.chat.id
     if chat_id not in user_data:
-        send_welcome(message)
-        return
+        user_data[chat_id] = {'running': False, 'url': '', 'threads': 5, 'total_clicks': 0}
 
     text = message.text
 
@@ -167,13 +171,22 @@ def save_url(message):
 def save_threads(message):
     try:
         count = int(message.text)
-        if count > 50: count = 50
         user_data[message.chat.id]['threads'] = count
         bot.send_message(message.chat.id, f"✅ থ্রেড সংখ্যা {count} এ সেট করা হয়েছে।")
     except:
         bot.send_message(message.chat.id, "❌ সঠিক সংখ্যা লিখুন।")
 
+# --- বট স্টার্ট এবং লাইভ লগ ফিক্স ---
 if __name__ == "__main__":
-    print("Mizanur's Telegram Bot is starting...")
-    bot.infinity_polling()
+    print("------------------------------------------")
+    print("MIZANUR RAHMAN'S SYSTEM IS STARTING...")
+    print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("------------------------------------------")
+    
+    while True:
+        try:
+            bot.polling(none_stop=True, interval=0, timeout=20)
+        except Exception as e:
+            print(f"Polling Error at {datetime.now().strftime('%H:%M:%S')}: {e}")
+            time.sleep(5)
                     
